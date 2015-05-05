@@ -19,10 +19,10 @@ __author__ = 'Navin'
 
 import re
 import urllib2
-
+from sets import Set
 
 def getChannels():
-    return {'ITN', 'Rupavahini'}
+    return {'ITN', 'Rupavahini', 'Derana'}
 
 
 class Channel(object):
@@ -115,5 +115,57 @@ class ITN(Channel):
     def getVideo(self, episodePagePath):
         videoUrlRegex = re.compile(r"</span><a href=\"(?P<video_page>http://[-_a-zA-Z0-9/.]+)\">")
         videoPageSource = super(ITN, self).getSource(episodePagePath)
+        video_urls = videoUrlRegex.findall(videoPageSource)
+        return video_urls[0]
+
+
+class Derana(Channel):
+    def __init__(self):
+        super(Derana, self).__init__("http://www.derana.lk")
+        self.categories = {"Entertainment": "/"}
+
+    def getCategories(self):
+        return tuple(self.categories.keys())
+
+    def getProgrammes(self, category):
+        category_path = self.categories[category]
+        source = super(Derana, self).getSource(category_path)
+        regex_block = re.compile(r"<div class=\"header\">\s*<ul>\s*<li>"+"Music"+"</li>\s*</ul>"+"(.+?)</li>\s*</ul>\s*</div>", re.DOTALL)
+        htmlFragments = regex_block.findall(source)
+        regex = re.compile(
+            r",\'http://www.derana.lk(?P<programme_path>[- a-zA-Z/]+?)\'(.+?)<h2>(?P<programme_name>.+?)</h2>\s*<p>", re.DOTALL)
+        programmeItr = regex.finditer(htmlFragments[0])
+        uniqueProgrammes = Set()
+        for programmeDetails in programmeItr:
+            programme = (programmeDetails.group('programme_name'), programmeDetails.group('programme_path') )
+            uniqueProgrammes.add(programme)
+        for programme in uniqueProgrammes:
+            yield programme
+
+
+    def getEpisodes(self, programPagePath):
+        regex_block = re.compile(r"<div class=\"header\">\s*<ul>\s*<li>"+"Video Gallery"+"</li>\s*</ul>"+"(.+?)</a>\s*</div>\s*</div>\s*</div>\s*<div class=\"clearfix\"", re.DOTALL)
+        regex = re.compile(
+            r",\'http://www.derana.lk(?P<episode_path>[- a-zA-Z0-9/&=]+?)'\);"
+            r"(.+?)"
+            r"<img\s*src=\"(?P<img_url>http://derana.lk/[- a-zA-Z0-9\_/.]+)\""
+            r"(.+?)"
+            r"\s*<p>(?P<title>[- a-zA-Z0-9|]+)</p>"
+            , re.DOTALL)
+        source = super(Derana, self).getSource(programPagePath)
+        htmlFragments = regex_block.findall(source)
+        # print htmlFragments
+        episodes = regex.finditer(htmlFragments[0])
+        for episodeDetails in episodes:
+            # print "episode Details=" + episodeDetails.group('episode_path')  + " image url="+ episodeDetails.group('img_url')+ " title="+episodeDetails.group('title')
+            episode = (episodeDetails.group('title').replace("&#8211;", "-"), episodeDetails.group('episode_path'),
+                       episodeDetails.group('img_url'))
+            yield episode
+
+
+    def getVideo(self, episodePagePath):
+        videoUrlRegex = re.compile(r"\s{2}<iframe (?:.+?)\s+src=\"(?P<video_page>http://www.youtube.com[-_a-zA-Z0-9\/]+)?")
+        videoPageSource = super(Derana, self).getSource(episodePagePath)
+        # print "video page source="+videoPageSource
         video_urls = videoUrlRegex.findall(videoPageSource)
         return video_urls[0]

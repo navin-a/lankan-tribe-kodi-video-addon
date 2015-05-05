@@ -3,6 +3,7 @@ __author__ = 'Navin'
 import unittest
 from channel import ITN
 from channel import Rupavahini
+from channel import Derana
 
 
 class TestITN(unittest.TestCase):
@@ -113,6 +114,50 @@ class TestRupavahini(unittest.TestCase):
             noOfProgrammes += 1
         self.assertGreater(noOfProgrammes, 2, "Number of programmes found is too low. Could be an error")
         self.assertLess(noOfProgrammes, 40, "Number of programmes found is too high. Could be an error")
+
+class TestDerana(unittest.TestCase):
+    def setUp(self):
+        self.channel = Derana()
+
+    def testGetSource(self):
+        source = self.channel.getSource("/")
+        self.assertIsNotNone(source)
+        self.assertGreater(source, 0, "Derana Home page source not available")
+        self.assertTrue(len(source) > 10000, "Derana home page source length is too short")
+
+    def testGetCategories(self):
+        self.assertEquals(self.channel.getCategories(), ('Entertainment',))
+
+    def testGetProgrammesForEntertainmentCategory(self):
+        programmes = self.channel.getProgrammes('Entertainment')
+        self.assertIsNotNone(programmes)
+        noOfProgrammes = 0
+        for prg in programmes:
+            self.assertIsInstance(prg, tuple, "Does not return the expected data structure (tuple)")
+            self.assertTrue(len(prg) == 2, "Does not provide the expected details of the programme")
+            self.assertIsNotNone(prg[0])
+            self.assertIsNotNone(prg[1])
+            noOfProgrammes += 1
+        self.assertGreater(noOfProgrammes, 0, "Number of programmes found is too low. Could be an error")
+        self.assertLess(noOfProgrammes, 40, "Number of programmes found is too high. Could be an error")
+
+    def testGetEpisodesForEntertainment(self):
+        programmes = self.channel.getProgrammes('Entertainment')
+        programme = programmes.next()
+        episodes = self.channel.getEpisodes(programme[1])
+        noOfEpisodes = 0
+        for episode in episodes:
+            self.assertIsInstance(episode, tuple, "Does not return the expected data structure (tuple)")
+            self.assertTrue(len(episode) == 3, "Does not provide the expected details of the episode")
+            self.assertIsNotNone(episode[0])
+            self.assertIsNotNone(episode[1])
+            self.assertIsNotNone(episode[2])
+            noOfEpisodes += 1
+        self.assertGreater(noOfEpisodes, 0, "Episodes for programme " + programme[1] + " not found")
+        self.assertLess(noOfEpisodes, 21, "Too many episodes found. Could be an error")
+
+    def testVideo(self):
+        self.channel.getVideo('/Dell-Studio-Dell-Studio-Studiyo-Songs&vid=13532&page=1')
 
 
 if __name__ == '__main__':
