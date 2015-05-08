@@ -90,7 +90,7 @@ class ITN(Channel):
         category_path = self.categories[category]
         source = super(ITN, self).getSource(category_path)
         regex = re.compile(
-            r"href=\"http://www.itn.lk(?P<programme_path>" + category_path + "/[-a-zA-Z]+?/)\">(?P<programme_name>[- a-zA-Z]+?)</a>")
+            r"href=\"http://www.itn.lk(?P<programme_path>" + category_path + "/[-a-zA-Z]+?/)\"\s*>(?P<programme_name>[- a-zA-Z]+?)</a>")
         programmeItr = regex.finditer(source)
         for programmeDetails in programmeItr:
             programme = (programmeDetails.group('programme_name'), programmeDetails.group('programme_path') )
