@@ -20,6 +20,7 @@ __author__ = 'Navin'
 import re
 import urllib2
 from sets import Set
+import YDStreamExtractor
 
 def getChannels():
     return {'ITN', 'Rupavahini', 'Derana'}
@@ -130,10 +131,15 @@ class Derana(Channel):
     def getProgrammes(self, category):
         category_path = self.categories[category]
         source = super(Derana, self).getSource(category_path)
-        regex_block = re.compile(r"<div class=\"header\">\s*<ul>\s*<li>"+"Music"+"</li>\s*</ul>"+"(.+?)</li>\s*</ul>\s*</div>", re.DOTALL)
+        regex_block = re.compile(
+            r"<div class=\"header\">\s*<ul>\s*<li>" + "Music" + "</li>\s*</ul>" + "(.+?)</li>\s*</ul>\s*</div>",
+            re.DOTALL)
         htmlFragments = regex_block.findall(source)
+        # remove commented blocks
+        htmlFragments[0] = re.sub('<!--.+?-->', '', htmlFragments[0], flags=re.DOTALL)
         regex = re.compile(
-            r",\'http://www.derana.lk(?P<programme_path>[- a-zA-Z/]+?)\'(.+?)<h2>(?P<programme_name>.+?)</h2>\s*<p>", re.DOTALL)
+            r",\'http://www.derana.lk(?P<programme_path>[- a-zA-Z/]+?)\'(.+?)<h2>(?P<programme_name>.+?)</h2>\s*<p>",
+            re.DOTALL)
         programmeItr = regex.finditer(htmlFragments[0])
         uniqueProgrammes = Set()
         for programmeDetails in programmeItr:
@@ -144,7 +150,9 @@ class Derana(Channel):
 
 
     def getEpisodes(self, programPagePath):
-        regex_block = re.compile(r"<div class=\"header\">\s*<ul>\s*<li>"+"Video Gallery"+"</li>\s*</ul>"+"(.+?)</a>\s*</div>\s*</div>\s*</div>\s*<div class=\"clearfix\"", re.DOTALL)
+        regex_block = re.compile(
+            r"<div class=\"header\">\s*<ul>\s*<li>" + "Video Gallery" + "</li>\s*</ul>" + "(.+?)</a>\s*</div>\s*</div>\s*</div>\s*<div class=\"clearfix\"",
+            re.DOTALL)
         regex = re.compile(
             r",\'http://www.derana.lk(?P<episode_path>[- a-zA-Z0-9/&=]+?)'\);"
             r"(.+?)"
@@ -164,8 +172,12 @@ class Derana(Channel):
 
 
     def getVideo(self, episodePagePath):
-        videoUrlRegex = re.compile(r"\s{2}<iframe (?:.+?)\s+src=\"(?P<video_page>http://www.youtube.com[-_a-zA-Z0-9\/]+)?")
+        videoUrlRegex = re.compile(
+            r"\s{2}<iframe (?:.+?)\s+src=\"(?P<video_page>http://www.youtube.com[-_a-zA-Z0-9\/]+)?")
         videoPageSource = super(Derana, self).getSource(episodePagePath)
         # print "video page source="+videoPageSource
+        YDStreamExtractor.disableDASHVideo(True)
         video_urls = videoUrlRegex.findall(videoPageSource)
-        return video_urls[0]
+        url = video_urls[0]
+        vid = YDStreamExtractor.getVideoInfo(url,quality=1)
+        return vid.streamURL()
