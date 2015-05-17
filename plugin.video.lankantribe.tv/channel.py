@@ -19,10 +19,12 @@ __author__ = 'Navin'
 
 import re
 import urllib2
+from sets import Set
+import YDStreamExtractor
 
 
 def getChannels():
-    return {'ITN', 'Rupavahini'}
+    return {'ITN', 'Rupavahini', 'Derana'}
 
 
 class Channel(object):
@@ -33,6 +35,9 @@ class Channel(object):
         content_url = self.channelUrl + relativePath
         source = urllib2.urlopen(content_url).read()
         return source.replace('\n', ' ').replace('\r', ' ')
+
+    def removeComments(self, source):
+        return re.sub('<!--(.*?)-->', '', source, flags=re.DOTALL)
 
 
 class Rupavahini(Channel):
@@ -117,3 +122,77 @@ class ITN(Channel):
         videoPageSource = super(ITN, self).getSource(episodePagePath)
         video_urls = videoUrlRegex.findall(videoPageSource)
         return video_urls[0]
+
+
+class Derana(Channel):
+    def __init__(self):
+        super(Derana, self).__init__("http://www.derana.lk")
+        self.categories = {'Music': "/", 'Talk Shows': "/", 'Magazine & Variety': "/", 'Reality Shows': "/"}
+        self.textRepresentation = {"Music": "Music", "Talk Shows": "Talk Shows",
+                                   "Magazine & Variety": "Magazine &amp; Variety", "Reality Shows": "Reality Shows"}
+
+    def getCategories(self):
+        return tuple(self.categories.keys())
+
+    def getProgrammes(self, category):
+        category_path = self.categories[category]
+        source = super(Derana, self).getSource(category_path)
+        regex_block = re.compile(
+            r"<div class=\"header\">\s*<ul>\s*<li>" + self.textRepresentation[
+                category] + "</li>\s*</ul>" + "(.+?)</li>\s*</ul>\s*</div>",
+            re.DOTALL)
+        htmlFragments = regex_block.findall(source)
+        # remove commented blocks
+        htmlFragments[0] = super(Derana, self).removeComments(htmlFragments[0])
+        # print "getProgrammes: html fragment with comments stripped off= " + htmlFragments[0]
+        regex = re.compile(
+            r",\'http://www.derana.lk(?P<programme_path>[- a-zA-Z0-9/]+?)\'(.+?)<h2>(?P<programme_name>.+?)</h2>\s*<p>",
+            re.DOTALL)
+        programmeItr = regex.finditer(htmlFragments[0])
+        uniqueProgrammes = Set()
+        for programmeDetails in programmeItr:
+            programme = (programmeDetails.group('programme_name'), programmeDetails.group('programme_path') )
+            uniqueProgrammes.add(programme)
+        for programme in uniqueProgrammes:
+            yield programme
+
+
+    def getEpisodes(self, programPagePath):
+        regex_block = re.compile(
+            r"<div class=\"header\">\s*<ul>\s*<li>" + "Video Gallery" + "</li>\s*</ul>" + "(.+?)</a>\s*</div>\s*</div>\s*</div>\s*<div class=\"clearfix\"",
+            re.DOTALL)
+        regex = re.compile(
+            r",\'http://www.derana.lk(?P<episode_path>[- a-zA-Z0-9/&=]+?)'\);\">"
+            # r"(.+?)"
+            r"\s*"
+            r"<img\s*src=\"(?P<img_url>http://derana.lk/[- a-zA-Z0-9\_/.]+)\""
+            r"(.+?)"
+            r"\s*<p>(?P<title>[- a-zA-Z0-9|]+)</p>"
+            , re.DOTALL)
+        source = super(Derana, self).getSource(programPagePath)
+        # print "before removing comments= "+source
+        # remove commented blocks
+        source = super(Derana, self).removeComments(source)
+        # print "comments removed= "+source
+        htmlFragments = regex_block.findall(source)
+        # print htmlFragments
+        episodes = regex.finditer(htmlFragments[0])
+        for episodeDetails in episodes:
+            imgUrl = episodeDetails.group('img_url').replace(" ", "%20")
+            # print "episode Details=" + episodeDetails.group(
+            #     'episode_path') + " image url=" + imgUrl + " title=" + episodeDetails.group('title')
+            episode = (episodeDetails.group('title').replace("&#8211;", "-"), episodeDetails.group('episode_path'),
+                       imgUrl)
+            yield episode
+
+
+    def getVideo(self, episodePagePath):
+        videoUrlRegex = re.compile(
+            r"\s{2}<iframe (?:.+?)\s+src=\"(?P<video_page>http://www.youtube.com[-_a-zA-Z0-9\/]+)?")
+        videoPageSource = super(Derana, self).getSource(episodePagePath)
+        # print "video page source="+videoPageSource
+        YDStreamExtractor.disableDASHVideo(True)
+        video_urls = videoUrlRegex.findall(videoPageSource)
+        url = video_urls[0]
+        vid = YDStreamExtractor.getVideoInfo(url, quality=1)
+        return vid.streamURL()
