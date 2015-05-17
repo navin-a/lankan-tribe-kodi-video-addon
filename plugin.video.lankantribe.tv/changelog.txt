@@ -3,3 +3,7 @@ Version 0.0.5
 
 Version 1.0.0
 - Release with ITN & Rupavahini channels
+
+Version 1.0.1-17052015_01
+- Added Derana
+
