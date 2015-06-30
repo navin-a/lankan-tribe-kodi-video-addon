@@ -7,3 +7,5 @@ Version 1.0.0
 Version 1.0.1-17052015_01
 - Added Derana
 
+Version 1.0.2-30062015_01
+- Added Swarnavahini
