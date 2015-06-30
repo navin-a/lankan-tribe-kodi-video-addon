@@ -24,7 +24,7 @@ import YDStreamExtractor
 
 
 def getChannels():
-    return {'ITN', 'Rupavahini', 'Derana'}
+    return {'Derana', 'ITN', 'Rupavahini', 'Swarnavahini'}
 
 
 class Channel(object):
@@ -190,6 +190,65 @@ class Derana(Channel):
         videoUrlRegex = re.compile(
             r"\s{2}<iframe (?:.+?)\s+src=\"(?P<video_page>http://www.youtube.com[-_a-zA-Z0-9\/]+)?")
         videoPageSource = super(Derana, self).getSource(episodePagePath)
+        # print "video page source="+videoPageSource
+        YDStreamExtractor.disableDASHVideo(True)
+        video_urls = videoUrlRegex.findall(videoPageSource)
+        url = video_urls[0]
+        vid = YDStreamExtractor.getVideoInfo(url, quality=1)
+        return vid.streamURL()
+
+
+class Swarnavahini(Channel):
+    def __init__(self):
+        super(Swarnavahini, self).__init__("http://www.swarnavahini.lk")
+        self.categories = {'News': 0, 'Teledrama': 1, 'Entertainment': 2, 'Political': 3}
+        self.textRepresentation = {"Music": "Music", "Talk Shows": "Talk Shows",
+                                   "Magazine & Variety": "Magazine &amp; Variety", "Reality Shows": "Reality Shows"}
+
+    def getCategories(self):
+        return tuple(self.categories.keys())
+
+    def getProgrammes(self, category):
+        category_index = self.categories[category]
+        source = super(Swarnavahini, self).getSource("/")
+        regex_block = re.compile('<ul class=\"dropdown-menu\">(.+?)</ul>', re.DOTALL)
+        htmlFragments = regex_block.findall(source)
+        # print "getProgrammes: html fragment with comments stripped off= " + htmlFragments[0]
+        regex = re.compile(
+            r'\"http://www.swarnavahini.lk(?P<programme_path>[- a-zA-Z0-9/]+?)\">(?P<programme_name>.+?)</a></li>',
+            re.DOTALL)
+        programmeItr = regex.finditer(htmlFragments[category_index])
+        uniqueProgrammes = Set()
+        for programmeDetails in programmeItr:
+            programme = (programmeDetails.group('programme_name'), programmeDetails.group('programme_path') )
+            uniqueProgrammes.add(programme)
+        for programme in uniqueProgrammes:
+            yield programme
+
+
+    def getEpisodes(self, programPagePath):
+        regex = re.compile(r"<div class=\"col-sm-3 col-xs-6 item post\">(?:.+?)src=\""
+                           r"(?P<img_url>http://[-a-zA-Z0-9/\.]+jpg)(?:.+?)<h3>"
+                           r"<a href=\"http://www.swarnavahini.lk(?P<episode_path>[-a-zA-Z0-9/%]+)\">(?P<title>.+?)</a></h3>", re.DOTALL)
+        source = super(Swarnavahini, self).getSource(programPagePath)
+        # print "before removing comments= "+source
+        # remove commented blocks
+        source = super(Swarnavahini, self).removeComments(source)
+        # print "comments removed= "+source
+        episodes = regex.finditer(source)
+        for episodeDetails in episodes:
+            imgUrl = episodeDetails.group('img_url').replace(" ", "%20")
+            # print "episode Details=" + episodeDetails.group(
+            #     'episode_path') + " image url=" + imgUrl + " title=" + episodeDetails.group('title')
+            episode = (episodeDetails.group('title').replace("&#8211;", "-"), episodeDetails.group('episode_path'),
+                       imgUrl)
+            yield episode
+
+
+    def getVideo(self, episodePagePath):
+        videoUrlRegex = re.compile(
+            r"<iframe (?:.+?)\s+src=\"(?P<video_page>https*://www.youtube.com[-_a-zA-Z0-9\/]+)?")
+        videoPageSource = super(Swarnavahini, self).getSource(episodePagePath)
         # print "video page source="+videoPageSource
         YDStreamExtractor.disableDASHVideo(True)
         video_urls = videoUrlRegex.findall(videoPageSource)
