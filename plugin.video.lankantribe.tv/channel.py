@@ -33,6 +33,7 @@ class Channel(object):
 
     def getSource(self, relativePath):
         content_url = self.channelUrl + relativePath
+        # print "content_url="+content_url
         source = urllib2.urlopen(content_url).read()
         return source.replace('\n', ' ').replace('\r', ' ')
 
@@ -93,7 +94,9 @@ class ITN(Channel):
 
     def getProgrammes(self, category):
         category_path = self.categories[category]
+        # print "category path=" + category_path
         source = super(ITN, self).getSource(category_path)
+        # print source
         regex = re.compile(
             r"href=\"http://www.itn.lk(?P<programme_path>" + category_path + "/[-a-zA-Z]+?/)\"\s*>(?P<programme_name>[- a-zA-Z]+?)</a>")
         programmeItr = regex.finditer(source)
@@ -238,9 +241,14 @@ class Swarnavahini(Channel):
         episodes = regex.finditer(source)
         for episodeDetails in episodes:
             imgUrl = episodeDetails.group('img_url').replace(" ", "%20")
-            # print "episode Details=" + episodeDetails.group(
-            #     'episode_path') + " image url=" + imgUrl + " title=" + episodeDetails.group('title')
-            episode = (episodeDetails.group('title').replace("&#8211;", "-"), episodeDetails.group('episode_path'),
+            title = episodeDetails.group('title')
+            separator_index= title.find('|')
+            if separator_index > 0:
+                title = title[:separator_index]
+            title =  re.sub(r"&#[0-9]{4};","",title)
+            # title = re.sub(r"&#[0-9]{4};","",episodeDetails.group('title').decode('unicode_escape').encode('ascii','ignore'))
+            # print "episode Details=" + episodeDetails.group('episode_path') + " image url=" + imgUrl + " title=" + title
+            episode = (title, episodeDetails.group('episode_path'),
                        imgUrl)
             yield episode
 
