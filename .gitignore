@@ -1,2 +1,3 @@
 *.name
-plugin.video.lankantribe.tv/.idea/*
+.idea/*
+*.pyc
