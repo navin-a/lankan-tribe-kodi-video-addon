@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.lankantribetv" name="Lankan Tribe .tv" provider-name="Navin" version="1.0.2">
+<addon id="plugin.video.lankanvibetv" name="Lankan Vibe .tv" provider-name="Navin" version="1.0.2">
 	<requires>
 		<import addon="xbmc.python" version="2.1.0"/>
         <import addon="script.module.youtube.dl" version="14.810.0"/>

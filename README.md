@@ -1,2 +1,2 @@
-# lankan-tribe-kodi-video-addon
-Lankan Tribe (A video add-on for Kodi)
+# lankan-vibe-kodi-video-addon
+Lankan Vibe (A video add-on for Kodi)
