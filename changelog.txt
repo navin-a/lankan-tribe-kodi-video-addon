@@ -9,3 +9,7 @@ Version 1.0.1-17052015_01
 
 Version 1.0.2-30062015_01
 - Added Swarnavahini
+
+Version 1.0.5
+- Renamed add-on
+- Updated description
